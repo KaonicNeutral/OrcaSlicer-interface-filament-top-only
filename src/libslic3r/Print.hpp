@@ -531,6 +531,15 @@ private:
     void discover_horizontal_shells();
     void combine_infill();
     void _generate_support_material();
+
+    // Reassign the ExtrusionRole of all support interface as regular support
+    // except for top layers of the support interface geometry
+    void reassign_support_interface_except_top(ExtrusionRole new_role);
+    // Returns the minimum number of support interface layers that are being
+    // generated. If this returns N, the nth (index n-1) layer of support interface
+    // geometry must not be contacting the actual model, where n < N
+    unsigned int compute_min_interface_layer_count();
+
     std::pair<FillAdaptive::OctreePtr, FillAdaptive::OctreePtr> prepare_adaptive_infill_data(
         const std::vector<std::pair<const Surface*, float>>& surfaces_w_bottom_z) const;
     FillLightning::GeneratorPtr prepare_lightning_infill_data();

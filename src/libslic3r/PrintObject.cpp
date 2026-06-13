@@ -890,6 +890,14 @@ void PrintObject::generate_support_material()
             this->_generate_support_material();
             m_print->throw_if_canceled();
         }
+
+        // if enabled, only designate the top layers of support interface geometry as support interface material
+        bool supportInterfaceMaterialForTopOnly = true; // FIXME
+        if (supportInterfaceMaterialForTopOnly) {
+            BOOST_LOG_TRIVIAL(info) << "Reassigning support interface except on top...";
+            this->reassign_support_interface_except_top(erSupportMaterial);
+        }
+
         this->set_done(posSupportMaterial);
     }
 }
@@ -4296,6 +4304,96 @@ void PrintObject::_generate_support_material()
     else {
         PrintObjectSupportMaterial support_material(this, m_slicing_params);
         support_material.generate(*this);
+    }
+}
+
+unsigned int PrintObject::compute_min_interface_layer_count() {
+    return 2; // FIXME
+}
+
+void PrintObject::reassign_support_interface_except_top(ExtrusionRole new_role)
+{
+    unsigned int interfaceLayerCount = this->compute_min_interface_layer_count(); // FIXME
+    std::vector<unsigned int> interfaceCount;
+    std::vector<BoundingBox> boxes;
+    std::vector<decltype(boxes)::size_type> boxesToDrop;
+    for (size_t layer_idx = 0; layer_idx < m_layers.size(); ++ layer_idx) {
+        Layer* layer = m_layers[layer_idx];
+        boxesToDrop.clear();
+        // Keep track (by reference) of which ExtrusionEntity's have been matched
+        // This is saved as a const void* since it's just an address and we don't
+        // want to ever dereference it
+        std::vector<const void*> matchedExtrusionEntities;
+        // loop through every known support interface area
+        for (decltype(boxes)::size_type box_idx = 0; box_idx < boxes.size(); ++ box_idx) {
+            BoundingBox knownbox = boxes[box_idx];
+            bool matchingExtrusionEntity = false;
+            // Loop through every support interface ExtrusionEntity
+            bool extrusionEntityLoopExitFlag = false;
+            auto regions = layer->regions();
+            for (size_t region_idx = 0; region_idx < regions.size(); ++ region_idx) {
+                LayerRegion* region = regions[region_idx];
+                for (ExtrusionEntity *ee : region->perimeters) {
+                    ExtrusionRole eer = ee->role();
+                    BOOST_LOG_TRIVIAL(info) << "ee";
+                    BOOST_LOG_TRIVIAL(info) << boost::format("of role %1%\n") % eer;
+                    if (is_support_interface(ee->role())) {
+                        BoundingBox eebox = get_extents(ee->as_polyline());
+                        if (!knownbox.overlap(eebox)) continue;
+                        matchingExtrusionEntity = true;
+                        matchedExtrusionEntities.push_back((void*)ee);
+                        // We need to update the bounding box and interface count
+                        const BoundingBox& eeboxRef = eebox;
+                        boxes[box_idx].merge(eeboxRef);
+                        interfaceCount[box_idx]++;
+                        // Reassign the ExtrusionRole if we should
+                        BOOST_LOG_TRIVIAL(info) << boost::format("Test %1% < %2%\n")
+                            % interfaceCount[box_idx]
+                            % interfaceLayerCount;
+                        if (interfaceCount[box_idx] < interfaceLayerCount) {
+                            BOOST_LOG_TRIVIAL(info) << "test passed, calling attempt_set_extrusion_role";
+                            ee->attempt_set_extrusion_role(new_role);
+                        }
+                        extrusionEntityLoopExitFlag = true;
+                        break;
+                    }
+                }
+                if (extrusionEntityLoopExitFlag) break;
+            }
+            // If we don't find any match, we mark it to be dropped
+            if (!matchingExtrusionEntity) {
+                boxesToDrop.push_back(box_idx);
+            }
+        }
+        // Loop again through every ExtrusionEntity to see which ones we need to add
+        auto regions = layer->regions();
+        for (size_t region_idx = 0; region_idx < regions.size(); ++ region_idx) {
+            LayerRegion* region = regions[region_idx];
+            for (const ExtrusionEntity *ee : region->perimeters) {
+                ExtrusionRole eer = ee->role();
+                if (ee->role() == erSupportMaterialInterface) {
+                    // Go through each known box to see if this ExtrusionEntity is unknown
+                    bool hasMatchingBox = false;
+                    for (const void *refee : matchedExtrusionEntities) {
+                        if (((void*)ee) == refee) { // pointer comparison
+                            hasMatchingBox = true;
+                            break;
+                        }
+                    }
+                    // Add a new box if necessary
+                    if (!hasMatchingBox) {
+                        BoundingBox eebox = get_extents(ee->as_polyline());
+                        boxes.push_back(eebox);
+                        interfaceCount.push_back(0);
+                    }
+                }
+            }
+        }
+        // Drop all marked boxes
+        for (const decltype(boxes)::size_type drop_idx : boxesToDrop) {
+            boxes.erase(boxes.begin() + drop_idx);
+            interfaceCount.erase(interfaceCount.begin() + drop_idx);
+        }
     }
 }
 

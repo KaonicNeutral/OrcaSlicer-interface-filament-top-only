@@ -102,6 +102,10 @@ inline bool is_bridge(ExtrusionRole role) {
         || role == erOverhangPerimeter;
 }
 
+inline bool is_support_interface(ExtrusionRole role) {
+    return role == erSupportMaterialInterface;
+}
+
 class ExtrusionEntity
 {
 public:
@@ -111,6 +115,7 @@ public:
     virtual bool can_reverse() const { return true; }
     virtual bool can_sort() const { return true; }//BBS: only used in ExtrusionEntityCollection
     virtual void set_reverse() {}
+    virtual void attempt_set_extrusion_role(ExtrusionRole extrusion_role) {}
     virtual ExtrusionEntity* clone() const = 0;
     // Create a new object, initialize it with this object using the move semantics.
     virtual ExtrusionEntity* clone_move() = 0;
@@ -297,6 +302,7 @@ public:
     bool is_force_no_extrusion() const { return m_no_extrusion; }
     void set_force_no_extrusion(bool no_extrusion) { m_no_extrusion = no_extrusion; }
     void set_extrusion_role(ExtrusionRole extrusion_role) { m_role = extrusion_role; }
+    void attempt_set_extrusion_role(ExtrusionRole extrusion_role) override { set_extrusion_role(extrusion_role); }
     void set_reverse() override { m_can_reverse = false; }
     bool can_reverse() const override { return m_can_reverse; }
 
