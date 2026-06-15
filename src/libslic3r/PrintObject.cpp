@@ -896,6 +896,7 @@ void PrintObject::generate_support_material()
         if (supportInterfaceMaterialForTopOnly) {
             BOOST_LOG_TRIVIAL(info) << "Reassigning support interface except on top...";
             this->reassign_support_interface_except_top(erSupportMaterial);
+            BOOST_LOG_TRIVIAL(info) << "Finished reassigning support interface.";
         }
 
         this->set_done(posSupportMaterial);
@@ -4316,8 +4317,8 @@ void PrintObject::reassign_support_interface_except_top(ExtrusionRole new_role)
     unsigned int interfaceLayerCount = this->compute_min_interface_layer_count(); // FIXME
     std::vector<unsigned int> interfaceCount;
     std::vector<BoundingBox> boxes;
-    std::vector<decltype(boxes)::size_type> boxesToDrop;
-    for (size_t layer_idx = 0; layer_idx < m_layers.size(); ++ layer_idx) {
+    std::vector<size_t> boxesToDrop;
+    for (size_t layer_idx = 0; layer_idx < m_support_layers.size(); ++ layer_idx) {
         SupportLayer* slayer = m_support_layers[layer_idx];
         boxesToDrop.clear();
         // Keep track (by reference) of which ExtrusionEntity's have been matched
@@ -4325,14 +4326,15 @@ void PrintObject::reassign_support_interface_except_top(ExtrusionRole new_role)
         // want to ever dereference it
         std::vector<const void*> matchedExtrusionEntities;
         // loop through every known support interface area
-        for (decltype(boxes)::size_type box_idx = 0; box_idx < boxes.size(); ++ box_idx) {
+        BOOST_LOG_TRIVIAL(info) << "woop woop";
+        for (size_t box_idx = 0; box_idx < boxes.size(); ++ box_idx) {
             BoundingBox knownbox = boxes[box_idx];
             bool matchingExtrusionEntity = false;
             // Loop through every support interface ExtrusionEntity
             for (ExtrusionEntity *ee : slayer->support_fills) {
                 ExtrusionRole eer = ee->role();
                 BOOST_LOG_TRIVIAL(info) << "ee";
-                BOOST_LOG_TRIVIAL(info) << boost::format("of role %1%\n") % eer;
+                BOOST_LOG_TRIVIAL(info) << boost::format("of role %1%\n") % ExtrusionEntity::role_to_string(eer);
                 if (is_support_interface(ee->role())) {
                     BoundingBox eebox = get_extents(ee->as_polyline());
                     if (!knownbox.overlap(eebox)) continue;
@@ -4358,20 +4360,26 @@ void PrintObject::reassign_support_interface_except_top(ExtrusionRole new_role)
                 boxesToDrop.push_back(box_idx);
             }
         }
+        BOOST_LOG_TRIVIAL(info) << "post";
         // Loop again through every ExtrusionEntity to see which ones we need to add
         for (const ExtrusionEntity *ee : slayer->support_fills) {
             ExtrusionRole eer = ee->role();
+            BOOST_LOG_TRIVIAL(info) << "post";
             if (ee->role() == erSupportMaterialInterface) {
                 // Go through each known box to see if this ExtrusionEntity is unknown
                 bool hasMatchingBox = false;
                 for (const void *refee : matchedExtrusionEntities) {
+                    BOOST_LOG_TRIVIAL(info) << "ptrcomp begin";
                     if (((void*)ee) == refee) { // pointer comparison
                         hasMatchingBox = true;
                         break;
                     }
+                    BOOST_LOG_TRIVIAL(info) << "ptrcomp end";
                 }
+                BOOST_LOG_TRIVIAL(info) << "ptrcomp end outer";
                 // Add a new box if necessary
                 if (!hasMatchingBox) {
+                    BOOST_LOG_TRIVIAL(info) << "adding new box";
                     BoundingBox eebox = get_extents(ee->as_polyline());
                     boxes.push_back(eebox);
                     interfaceCount.push_back(0);
@@ -4379,10 +4387,14 @@ void PrintObject::reassign_support_interface_except_top(ExtrusionRole new_role)
             }
         }
         // Drop all marked boxes
-        for (const decltype(boxes)::size_type drop_idx : boxesToDrop) {
-            boxes.erase(boxes.begin() + drop_idx);
-            interfaceCount.erase(interfaceCount.begin() + drop_idx);
+        BOOST_LOG_TRIVIAL(info) << "drop all marked boxes";
+        size_t idx_offset = 0;
+        for (const size_t drop_idx : boxesToDrop) {
+            boxes.erase(boxes.begin() + drop_idx - idx_offset);
+            interfaceCount.erase(interfaceCount.begin() + drop_idx - idx_offset);
+            idx_offset++;
         }
+        BOOST_LOG_TRIVIAL(info) << "layer loop end";
     }
 }
 
