@@ -120,7 +120,7 @@ public:
     virtual bool can_reverse() const { return true; }
     virtual bool can_sort() const { return true; }//BBS: only used in ExtrusionEntityCollection
     virtual void set_reverse() {}
-    virtual void attempt_set_extrusion_role(ExtrusionRole extrusion_role) {}
+    virtual void attempt_set_extrusion_role(ExtrusionRole extrusion_role) = 0;
     virtual ExtrusionEntity* clone() const = 0;
     // Create a new object, initialize it with this object using the move semantics.
     virtual ExtrusionEntity* clone_move() = 0;
@@ -424,6 +424,9 @@ public:
     bool empty() const { return this->paths.empty(); }
     double length() const override;
     ExtrusionRole role() const override { return this->paths.empty() ? erNone : this->paths.front().role(); }
+    void attempt_set_extrusion_role(ExtrusionRole new_role) override {
+        for (ExtrusionPath path : this->paths) path.attempt_set_extrusion_role(new_role);
+    }
     // Produce a list of 2D polygons covered by the extruded paths, offsetted by the extrusion width.
     // Increase the offset by scaled_epsilon to achieve an overlap, so a union will produce no gaps.
     void polygons_covered_by_width(Polygons &out, const float scaled_epsilon) const override;
@@ -496,6 +499,9 @@ public:
     ExtrusionRole role() const override { return this->paths.empty() ? erNone : this->paths.front().role(); }
     ExtrusionLoopRole loop_role() const { return m_loop_role; }
     void set_loop_role(ExtrusionLoopRole role) {    m_loop_role = role; }
+    void attempt_set_extrusion_role(ExtrusionRole new_role) override {
+        for (ExtrusionPath path : this->paths) path.attempt_set_extrusion_role(new_role);
+    }
     // Produce a list of 2D polygons covered by the extruded paths, offsetted by the extrusion width.
     // Increase the offset by scaled_epsilon to achieve an overlap, so a union will produce no gaps.
     void polygons_covered_by_width(Polygons &out, const float scaled_epsilon) const override;

@@ -532,9 +532,9 @@ private:
     void combine_infill();
     void _generate_support_material();
 
-    // Reassign the ExtrusionRole of all support interface as regular support
-    // except for top layers of the support interface geometry
-    void reassign_support_interface_except_top(ExtrusionRole new_role);
+    // Reassign the ExtrusionRole of all support built
+    // up on top of an object
+    void reassign_on_object_support(ExtrusionRole new_role);
     // Returns the minimum number of support interface layers that are being
     // generated. If this returns N, the nth (index n-1) layer of support interface
     // geometry must not be contacting the actual model, where n < N
