@@ -891,9 +891,9 @@ void PrintObject::generate_support_material()
             m_print->throw_if_canceled();
         }
 
-        // if enabled, only designate the top layers of support interface geometry as support interface material
-        bool supportInterfaceMaterialForTopOnly = true; // FIXME
-        if (supportInterfaceMaterialForTopOnly) {
+        // When using minimal support interface the support generation doesn't realize it
+        // shouldn't change support interface on objects itself, so we have to fix this
+        if (m_config.minimal_support_interface.value) {
             this->reassign_on_object_support(erSupportMaterialInterface);
         }
 

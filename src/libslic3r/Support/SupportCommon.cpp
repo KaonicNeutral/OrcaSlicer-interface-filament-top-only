@@ -1697,7 +1697,7 @@ void generate_support_toolpaths(
                 if (! layer_ex.empty() && ! layer_ex.polygons_to_extrude().empty()) {
                     bool interface_as_base = interface_layer_type == InterfaceLayerType::InterfaceAsBase;
                     bool mat_regular = interface_as_base;
-                    if (true) mat_regular |= true
+                    if (config.minimal_support_interface.value) mat_regular |= true
                         && (interface_layer_type != InterfaceLayerType::BottomContact)
                         && (interface_layer_type != InterfaceLayerType::TopContact)
                         && (interface_layer_type != InterfaceLayerType::RaftContact);
