@@ -62,8 +62,8 @@ public:
         }
         return out;
     }
-    void attempt_set_extrusion_role(ExtrusionRole new_role) override {
-        for (ExtrusionEntity *ee : entities) ee->attempt_set_extrusion_role(new_role);
+    void set_extrusion_role_all(ExtrusionRole new_role) override {
+        for (ExtrusionEntity *ee : entities) ee->set_extrusion_role_all(new_role);
     }
     bool has_perimeters() const
     {

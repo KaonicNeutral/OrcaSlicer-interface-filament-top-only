@@ -4315,16 +4315,14 @@ void PrintObject::reassign_on_object_support(ExtrusionRole new_role) {
         SupportLayer* slayer = m_support_layers[layer_idx];
         // We identify on-object support as that which does not intersect (by bounding box)
         // support or support interface on the previous layer
-        // We then convert it using ExtrusionEntity::attempt_set_extrusion_role
+        // We then convert it using ExtrusionEntity::set_extrusion_role_all
         for (ExtrusionEntity *ee : slayer->support_fills) {
             BoundingBox eebox = get_extents(ee->as_polylines());
             boxesCurr->push_back(eebox);
             if (!layer_idx) continue;
             bool unsupp = true;
             for (BoundingBox boxBelow : *boxesBelow) if (eebox.overlap(boxBelow)) unsupp = false;
-            if (unsupp) {
-                ee->attempt_set_extrusion_role(new_role);
-            }
+            if (unsupp) ee->set_extrusion_role_all(new_role);
         }
         // Prepare and swap the pointers
         boxesBelow->clear();
