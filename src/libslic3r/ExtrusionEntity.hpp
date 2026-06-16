@@ -106,6 +106,11 @@ inline bool is_support_interface(ExtrusionRole role) {
     return role == erSupportMaterialInterface;
 }
 
+inline bool is_any_support(ExtrusionRole role) {
+    return role == erSupportMaterial
+        || role == erSupportMaterialInterface;
+}
+
 class ExtrusionEntity
 {
 public:

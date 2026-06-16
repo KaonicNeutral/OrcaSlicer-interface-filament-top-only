@@ -4312,8 +4312,33 @@ unsigned int PrintObject::compute_min_interface_layer_count() {
     return 2; // FIXME
 }
 
-void PrintObject::reassign_support_interface_except_top(ExtrusionRole new_role)
-{
+// FIXME rename to PrintObject::reassign_on_object_support_material
+void PrintObject::reassign_support_interface_except_top(ExtrusionRole new_role) {
+    std::vector<BoundingBox> boxesA;
+    std::vector<BoundingBox> boxesB;
+    std::vector<BoundingBox> *boxesBelow = &boxesA;
+    std::vector<BoundingBox> *boxesCurr = &boxesB;
+    for (size_t layer_idx = 0; layer_idx < m_support_layers.size(); ++ layer_idx) {
+        SupportLayer* slayer = m_support_layers[layer_idx];
+        // We identify on-object support as that which does not intersect (by bounding box)
+        // support or support interface on the previous layer
+        // We then convert it using ExtrusionEntity::attempt_set_extrusion_role
+        for (ExtrusionEntity *ee : slayer->support_fills) {
+            BoundingBox eebox = get_extents(ee->as_polylines());
+            boxesCurr->push_back(eebox);
+            bool unsupp = true;
+            for (BoundingBox boxBelow : *boxesBelow) if (eebox.overlap(boxBelow)) unsupp = false;
+            if (unsupp) ee->attempt_set_extrusion_role(new_role);
+        }
+        // Prepare and swap the pointers
+        boxesBelow->clear();
+        std::vector<BoundingBox> *nextBoxesBelow = boxesCurr;
+        boxesCurr = boxesBelow;
+        boxesBelow = nextBoxesBelow;
+    }
+}
+
+/*
     unsigned int interfaceLayerCount = this->compute_min_interface_layer_count(); // FIXME
     std::vector<unsigned int> interfaceCount;
     std::vector<BoundingBox> boxes;
@@ -4397,6 +4422,7 @@ void PrintObject::reassign_support_interface_except_top(ExtrusionRole new_role)
         BOOST_LOG_TRIVIAL(info) << "layer loop end";
     }
 }
+// */
 
 // BBS
 #define SUPPORT_SURFACES_OFFSET_PARAMETERS ClipperLib::jtSquare, 0.
