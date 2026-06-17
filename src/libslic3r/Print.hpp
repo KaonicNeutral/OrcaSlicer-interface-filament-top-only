@@ -535,10 +535,6 @@ private:
     // Reassign the ExtrusionRole of all support built
     // up on top of an object
     void reassign_on_object_support(ExtrusionRole new_role);
-    // Returns the minimum number of support interface layers that are being
-    // generated. If this returns N, the nth (index n-1) layer of support interface
-    // geometry must not be contacting the actual model, where n < N
-    unsigned int compute_min_interface_layer_count();
 
     std::pair<FillAdaptive::OctreePtr, FillAdaptive::OctreePtr> prepare_adaptive_infill_data(
         const std::vector<std::pair<const Surface*, float>>& surfaces_w_bottom_z) const;
